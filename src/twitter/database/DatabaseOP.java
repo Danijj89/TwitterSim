@@ -33,6 +33,21 @@ public interface DatabaseOP {
   void addTweets(String filePath);
 
   /**
+   * Adds a given follower-followee relation into the Twitter database.
+   *
+   * @param followerId the id of the follower.
+   * @param followeeId the id of the followee.
+   */
+  void addFollower(int followerId, int followeeId);
+
+  /**
+   * Adds all the follower-followee relations from a given file.
+   *
+   * @param filePath the path to the file.
+   */
+  void addFollowers(String filePath);
+
+  /**
    * Retrieves the home timeline of a a user given his id.
    * The number of tweets in this home timeline is at max 10.
    *

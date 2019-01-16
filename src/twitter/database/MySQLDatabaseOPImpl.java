@@ -1,7 +1,7 @@
 package twitter.database;
 
 import com.google.gson.stream.JsonReader;
-import java.io.BufferedReader;
+import com.mysql.cj.MysqlConnection;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
@@ -30,16 +30,26 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   @Override
   public void addTweet(int userId, String datetime, String message)
       throws IllegalArgumentException {
-    if ()
+    if (userId < 1) {
+      throw new IllegalArgumentException("Given user id is smaller than 1");
+    }
+    if (datetime == null || message == null) {
+      throw new IllegalArgumentException("Given datetime or message is null");
+    }
     try {
-      this.preparedStatement = this.connection.prepareStatement(
-          "INSERT INTO tweets(user_id,tweet_ts,tweet_text) VALUES (?,?,?)");
-      this.preparedStatement.setString(1, String.valueOf(userId));
-      this.preparedStatement.setString(2, datetime);
-      this.preparedStatement.setString(3, message);
-      this.preparedStatement.executeUpdate();
+      if (!this.connection.isClosed()) {
+        this.preparedStatement = this.connection.prepareStatement(
+            "INSERT INTO tweets(user_id,tweet_ts,tweet_text) VALUES (?,?,?)");
+        this.preparedStatement.setString(1, String.valueOf(userId));
+        this.preparedStatement.setString(2, datetime);
+        this.preparedStatement.setString(3, message);
+        this.preparedStatement.executeUpdate();
+      }
+      else {
+        throw new IllegalStateException("Connection is closed");
+      }
     } catch (SQLException e) {
-      e.printStackTrace();
+      e.getErrorCode();
     }
   }
 
@@ -61,12 +71,77 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
     }
   }
 
+  @Override
+  public void addFollower(int followerId, int followeeId) {
+    if (followerId == followeeId) {
+      throw new IllegalArgumentException("Follower and followee have the same id");
+    }
+    try {
+      if (!this.connection.isClosed()) {
+        this.preparedStatement = this.connection.prepareStatement(
+            "INSERT INTO followers(user_id,follows_id) VALUES (?,?)");
+        this.preparedStatement.setString(1, String.valueOf(followerId));
+        this.preparedStatement.setString(2, String.valueOf(followeeId));
+        this.preparedStatement.executeUpdate();
+      }
+    } catch (SQLException e) {
+      e.getErrorCode();
+    }
+  }
+
+  @Override
+  public void addFollowers(String filePath) {
+    try {
+      JsonReader reader = new JsonReader(new FileReader(filePath));
+      reader.beginArray();
+      while (reader.hasNext()) {
+        reader.beginArray();
+        while (reader.hasNext()) {
+          this.addFollowerHelp(reader);
+        }
+        reader.endArray();
+      }
+      reader.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
   /**
-   * Parses a Tweet from a Json object and inserts it into the database.
+   * Parses a follower-followee relation from a {@link JsonReader} and inserts it into the database.
    *
-   * @param reader the reader to read the json object from.
+   * @param reader the reader to read the json from.
+   */
+  private void addFollowerHelp(JsonReader reader) throws IOException {
+    int follower_id = -1;
+    int followee_id = -1;
+    reader.beginObject();
+    while (reader.hasNext()) {
+      String name = reader.nextName();
+      if (name.equals("user_id")) {
+        follower_id = reader.nextInt();
+      }
+      if (name.equals("follows_id")) {
+        followee_id = reader.nextInt();
+      }
+      else {
+        reader.skipValue();
+      }
+    }
+    reader.endObject();
+    if (follower_id == -1 || followee_id == -1) {
+      throw new IllegalStateException("Missing data from current JsonReader");
+    }
+    this.addFollower(follower_id, followee_id);
+  }
+
+  /**
+   * Parses a Tweet from a {@link JsonReader} and inserts it into the database.
+   *
+   * @param reader the reader to read the json  from.
    */
   private void addTweetHelp(JsonReader reader) throws IOException {
+    // might be able to remove the tweet_id condition
     long tweet_id = -1;
     int userId = -1;
     String datetime = null;
@@ -91,12 +166,15 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       }
     }
     reader.endObject();
-    this.addTweet(userId, , );
+    if (userId == -1 || datetime == null || message == null) {
+      throw new IllegalStateException("Missing data from current JsonReader");
+    }
+    this.addTweet(userId, datetime, message);
   }
 
   @Override
   public List<Tweet> getHomeTM(int userId) {
-    return null;
+    return this.getHomeTM(userId, 10);
   }
 
   @Override
