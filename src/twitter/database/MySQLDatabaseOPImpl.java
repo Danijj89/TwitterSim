@@ -1,7 +1,6 @@
 package twitter.database;
 
 import com.google.gson.stream.JsonReader;
-import com.mysql.cj.MysqlConnection;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
@@ -10,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
@@ -179,7 +179,23 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
 
   @Override
   public List<Tweet> getHomeTM(int userId, int numOfTweets) {
-    return null;
+    List<Tweet> homeTM = new ArrayList<>();
+    try {
+      this.resultSet = this.statement.executeQuery(
+          "SELECT * FROM tweets JOIN followers on (tweets.user_id = followers.follows_id) "
+              + "WHERE followers.user_id ='" + String.valueOf(userId) + "' ORDER BY tweet_ts DESC");
+      while (this.resultSet.next()) {
+        long tweetId = this.resultSet.getLong("tweet_id");
+        int user = this.resultSet.getInt("user_id");
+        String datetime = this.resultSet.getString("tweet_ts");
+        String message = this.resultSet.getString("tweet_text");
+        Tweet t = new Tweet(tweetId, user, datetime, message);
+        homeTM.add(t);
+      }
+    } catch (SQLException e) {
+      e.getErrorCode();
+    }
+    return homeTM;
   }
 
   public void connect(String driver, String connectionPath) throws IllegalStateException {
