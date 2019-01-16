@@ -3,6 +3,7 @@ package twitter.database;
 
 /**
  * Value class that represents a Tweet in Twitter.
+ * The max length of the message of this tweet is set to 139.
  */
 public class Tweet {
 
@@ -14,6 +15,9 @@ public class Tweet {
   public Tweet(long tweetId, int userId, String datetime, String message) throws IllegalArgumentException {
     if (datetime == null || message == null) {
       throw new IllegalArgumentException("Given datetime or message is null");
+    }
+    if (message.length() > 139) {
+      throw new IllegalArgumentException("Length of the message has to be smaller than 140");
     }
     this.tweetId = tweetId;
     this.userId = userId;

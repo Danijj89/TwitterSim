@@ -1,5 +1,9 @@
 package twitter.database;
 
+import com.google.gson.stream.JsonReader;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -8,7 +12,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 
-public class MySQLDatabaseOPImpl implements DatabaseOP {
+public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
 
   private Connection connection = null;
   private Statement statement = null;
@@ -17,13 +21,31 @@ public class MySQLDatabaseOPImpl implements DatabaseOP {
 
   @Override
   public void addTweet(Tweet t) {
-
+    this.addTweet(t.getUserId(), t.getDatetime(), t.getMessage());
   }
 
   @Override
   public void addTweet(int userId, String datetime, String message)
       throws IllegalArgumentException {
+    try {
+      this.preparedStatement = this.connection.prepareStatement(
+          "INSERT INTO tweets(user_id,tweet_ts,tweet_text) VALUES (?,?,?)");
+      this.preparedStatement.setString(1, String.valueOf(userId));
+      this.preparedStatement.setString(2, datetime);
+      this.preparedStatement.setString(3, message);
+      this.preparedStatement.executeUpdate();
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+  }
 
+  @Override
+  public void addTweets(String filePath) {
+    try {
+      JsonReader reader = new JsonReader(new FileReader(filePath));
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   @Override
@@ -36,7 +58,7 @@ public class MySQLDatabaseOPImpl implements DatabaseOP {
     return null;
   }
 
-  protected void connect(String driver, String connectionPath) throws IllegalStateException {
+  public void connect(String driver, String connectionPath) throws IllegalStateException {
     try {
       // Setup the driver
       Class.forName(driver).newInstance();
@@ -52,7 +74,7 @@ public class MySQLDatabaseOPImpl implements DatabaseOP {
     }
   }
 
-  protected void closeConnection() throws IllegalStateException {
+  public void closeConnection() throws IllegalStateException {
     try {
       if (this.resultSet != null) {
         this.resultSet.close();

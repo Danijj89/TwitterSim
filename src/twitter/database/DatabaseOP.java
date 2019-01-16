@@ -26,6 +26,13 @@ public interface DatabaseOP {
   void addTweet(int userId, String datetime, String message) throws IllegalArgumentException;
 
   /**
+   * Adds all the tweets from a given file.
+   *
+   * @param filePath the path to the file.
+   */
+  void addTweets(String filePath);
+
+  /**
    * Retrieves the home timeline of a a user given his id.
    * The number of tweets in this home timeline is at max 10.
    *
