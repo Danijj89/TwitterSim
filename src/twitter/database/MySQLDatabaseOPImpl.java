@@ -21,12 +21,16 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
 
   @Override
   public void addTweet(Tweet t) {
+    if (t == null) {
+      throw new IllegalArgumentException("Given tweet is null");
+    }
     this.addTweet(t.getUserId(), t.getDatetime(), t.getMessage());
   }
 
   @Override
   public void addTweet(int userId, String datetime, String message)
       throws IllegalArgumentException {
+    if ()
     try {
       this.preparedStatement = this.connection.prepareStatement(
           "INSERT INTO tweets(user_id,tweet_ts,tweet_text) VALUES (?,?,?)");
@@ -43,9 +47,51 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   public void addTweets(String filePath) {
     try {
       JsonReader reader = new JsonReader(new FileReader(filePath));
+      reader.beginArray();
+      while (reader.hasNext()) {
+        reader.beginArray();
+        while (reader.hasNext()) {
+          this.addTweetHelp(reader);
+        }
+        reader.endArray();
+      }
+      reader.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
+  }
+
+  /**
+   * Parses a Tweet from a Json object and inserts it into the database.
+   *
+   * @param reader the reader to read the json object from.
+   */
+  private void addTweetHelp(JsonReader reader) throws IOException {
+    long tweet_id = -1;
+    int userId = -1;
+    String datetime = null;
+    String message = null;
+    reader.beginObject();
+    while (reader.hasNext()) {
+      String name = reader.nextName();
+      if (name.equals("tweet_id")) {
+        tweet_id = reader.nextLong();
+      }
+      if (name.equals("user_id")) {
+        userId = reader.nextInt();
+      }
+      if (name.equals("datetime")) {
+        datetime = reader.nextString();
+      }
+      if (name.equals("message")) {
+        message = reader.nextString();
+      }
+      else {
+        reader.skipValue();
+      }
+    }
+    reader.endObject();
+    this.addTweet(userId, , );
   }
 
   @Override
