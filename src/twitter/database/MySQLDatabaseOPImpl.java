@@ -59,12 +59,9 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       JsonReader reader = new JsonReader(new FileReader(filePath));
       reader.beginArray();
       while (reader.hasNext()) {
-        reader.beginArray();
-        while (reader.hasNext()) {
-          this.addTweetHelp(reader);
-        }
-        reader.endArray();
+        this.addTweetHelp(reader);
       }
+      reader.endArray();
       reader.close();
     } catch (IOException e) {
       e.printStackTrace();
@@ -95,12 +92,9 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       JsonReader reader = new JsonReader(new FileReader(filePath));
       reader.beginArray();
       while (reader.hasNext()) {
-        reader.beginArray();
-        while (reader.hasNext()) {
-          this.addFollowerHelp(reader);
-        }
-        reader.endArray();
+        this.addFollowerHelp(reader);
       }
+      reader.endArray();
       reader.close();
     } catch (IOException e) {
       e.printStackTrace();
@@ -121,7 +115,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       if (name.equals("user_id")) {
         follower_id = reader.nextInt();
       }
-      if (name.equals("follows_id")) {
+      else if (name.equals("follows_id")) {
         followee_id = reader.nextInt();
       }
       else {
@@ -152,13 +146,13 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       if (name.equals("tweet_id")) {
         tweet_id = reader.nextLong();
       }
-      if (name.equals("user_id")) {
+      else if (name.equals("user_id")) {
         userId = reader.nextInt();
       }
-      if (name.equals("datetime")) {
+      else if (name.equals("datetime")) {
         datetime = reader.nextString();
       }
-      if (name.equals("message")) {
+      else if (name.equals("message")) {
         message = reader.nextString();
       }
       else {
@@ -183,7 +177,8 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
     try {
       this.resultSet = this.statement.executeQuery(
           "SELECT * FROM tweets JOIN followers on (tweets.user_id = followers.follows_id) "
-              + "WHERE followers.user_id ='" + String.valueOf(userId) + "' ORDER BY tweet_ts DESC");
+              + "WHERE followers.user_id = " + String.valueOf(userId) + " ORDER BY tweet_ts "
+              + "DESC LIMIT " + String.valueOf(numOfTweets));
       while (this.resultSet.next()) {
         long tweetId = this.resultSet.getLong("tweet_id");
         int user = this.resultSet.getInt("user_id");

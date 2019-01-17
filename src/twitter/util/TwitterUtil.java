@@ -79,14 +79,20 @@ public class TwitterUtil {
       writer.beginArray();
       Random userId = new Random();
       for (int i = fromUser; i <= toUser; i++) {
-        for (int j = 0; j < numFollowee; j++) {
+        int counter = numFollowee;
+        while (counter > 0) {
           int follows = userId.nextInt(toUser - fromUser + 1) + fromUser;
-          writer.beginObject();
-          writer.name("user_id").value(i);
-          writer.name("follows_id").value(follows);
-          writer.endObject();
+          if (follows != i) {
+            writer.beginObject();
+            writer.name("user_id").value(i);
+            writer.name("follows_id").value(follows);
+            writer.endObject();
+            counter--;
+          }
         }
       }
+      writer.endArray();
+      writer.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
