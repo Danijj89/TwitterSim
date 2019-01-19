@@ -144,7 +144,6 @@ public class TwitterUtil {
         tweets.add(this.readTweet(reader));
         counter--;
       }
-      reader.endArray();
       reader.close();
       end = System.currentTimeMillis();
     } catch (IOException e) {

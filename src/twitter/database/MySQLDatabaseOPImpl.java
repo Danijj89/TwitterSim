@@ -178,7 +178,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       this.resultSet = this.statement.executeQuery(
           "SELECT * FROM tweets JOIN followers on (tweets.user_id = followers.follows_id) "
               + "WHERE followers.user_id = " + String.valueOf(userId) + " ORDER BY tweet_ts "
-              + "DESC LIMIT" + String.valueOf(numOfTweets));
+              + "DESC LIMIT " + String.valueOf(numOfTweets));
       while (this.resultSet.next()) {
         long tweetId = this.resultSet.getLong("tweet_id");
         int user = this.resultSet.getInt("user_id");
