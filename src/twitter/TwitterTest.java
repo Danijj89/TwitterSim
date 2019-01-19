@@ -1,24 +1,33 @@
 package twitter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import twitter.database.MySQLDatabaseOP;
 import twitter.database.MySQLDatabaseOPImpl;
+import twitter.database.Tweet;
 import twitter.util.TwitterUtil;
 
 public class TwitterTest {
 
   public static void main(String[] args) {
-    long numOfTweets = 50000;
+
+    long numOfTweets = 1000000;
+    int numOfUsers = 50000;
+    int numFollowRelationXuser = 20;
+    int limitHomeTM = 10;
+
     // Code used to produce initial files.
 
-    int numOfUsers = 5000;
-    int numFollowRelationXuser = 20;
     TwitterUtil util = new TwitterUtil();
     util.buildTweets(numOfTweets, numOfUsers, 2015, 2018,"tweets.json");
     util.buildFollowTable(1, numOfUsers, numFollowRelationXuser, "follows.json");
     MySQLDatabaseOP op = new MySQLDatabaseOPImpl();
+
     op.connect("com.mysql.cj.jdbc.Driver",
         "jdbc:mysql://localhost:3306/twitter?user=root&password=perAdun0!");
+
+    op.addFollowers("follows.json");
 
     // Start tweet writing speed test
 
@@ -32,28 +41,23 @@ public class TwitterTest {
     System.out.println(
         String.format("Tweets written per second is %d", tweetXsec));
 
-    // Start followers writing speed test
-
-    start = System.currentTimeMillis();
-    op.addFollowers("follows.json");
-    end = System.currentTimeMillis();
-    long totalFollowerTime = (end - start) / 1000;
-    long followersXsec = (numOfUsers * numFollowRelationXuser) / totalFollowerTime;
-    System.out.println(
-        String.format("Followers added per second is %d", followersXsec));
-
     // Start home timeline retrieval speed test
     Random r = new Random();
+    List<Tweet> resultHomeTM = new ArrayList<>();
+    long totalHomeTMSize = 0;
     start = System.currentTimeMillis();
-    for (int i = 0; i < 100; i++) {
-      op.getHomeTM(r.nextInt(numOfUsers) + 1);
-      System.out.println(i);
+    for (int i = 0; i < 50; i++) {
+      int user_id = r.nextInt(numOfUsers) + 1;
+      resultHomeTM = op.getHomeTM(user_id, limitHomeTM);
+      totalHomeTMSize += resultHomeTM.size();
     }
     end = System.currentTimeMillis();
     long totalHomeTM = (end - start) / 1000;
-    long homeTMXsec = 100 / totalHomeTM;
-    System.out.println(
-        String.format("Home timelines retrieved per second is %d", homeTMXsec));
+    long homeTMXsec = 50 / totalHomeTM;
+    long avgHomeTMsize = totalHomeTMSize / 50;
+    System.out.format("Home timelines retrieved per second is %d\n", homeTMXsec);
+    System.out.format("Home timelines average size retrieved is %d\n", avgHomeTMsize);
+
     op.closeConnection();
   }
 }

@@ -1,10 +1,18 @@
 package twitter.util;
 
+import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import com.mysql.cj.x.protobuf.MysqlxSql;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import twitter.database.MySQLDatabaseOP;
+import twitter.database.MySQLDatabaseOPImpl;
 import twitter.database.Tweet;
 
 /**
@@ -96,6 +104,95 @@ public class TwitterUtil {
     } catch (IOException e) {
       e.printStackTrace();
     }
+  }
+
+  /**
+   * Computes the speed of writing Tweets to JSON file.
+   *
+   * @param filePath the path of the file to write to.
+   * @param numOfTweets the number of tweets to write.
+   * @param numUsers the number of unique users that will appear in the written file.
+   * @return the number of tweets written per second.
+   */
+  public long getWriteSpeed(String filePath, long numOfTweets, int numUsers) {
+    long start = System.currentTimeMillis();
+    this.buildTweets(
+        numOfTweets, numUsers, 2018, 2019, filePath);
+    long end = System.currentTimeMillis();
+    double totalTimeInSec = (end - start) / 1000;
+    double tweetsXSec = numOfTweets / totalTimeInSec;
+    return (long)tweetsXSec;
+  }
+
+  /**
+   * Computes the speed of reading Tweets from a JSON file.
+   *
+   * @param filePath the path to the file to be read.
+   * @param numOfHomeTM the number of home time-lines to be retrieved
+   * @return
+   */
+  public long getReadSpeed(String filePath, long numOfHomeTM) {
+    List<Tweet> tweets = new ArrayList<>();
+    long start = 0;
+    long end = 0;
+    long counter = numOfHomeTM;
+    try {
+      start = System.currentTimeMillis();
+      JsonReader reader = new JsonReader(new FileReader(filePath));
+      reader.beginArray();
+      while (reader.hasNext() && counter > 0) {
+        tweets.add(this.readTweet(reader));
+        counter--;
+      }
+      reader.endArray();
+      reader.close();
+      end = System.currentTimeMillis();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    double totalTime = (end - start) / 1000;
+    double homeTMXSec = numOfHomeTM / totalTime;
+    return (long)homeTMXSec;
+  }
+
+  /**
+   * Helps read a single tweet and from JSON file.
+   *
+   * @param reader the {@link JsonReader} to read the tweet from.
+   * @return the Tweet read.
+   * @throws IOException if is it unable to read from the reader.
+   */
+  private Tweet readTweet(JsonReader reader) throws IOException {
+    // might be able to remove the tweet_id condition
+    List<Tweet> tweets = new ArrayList<>();
+    long tweet_id = -1;
+    int userId = -1;
+    String datetime = null;
+    String message = null;
+    reader.beginObject();
+    while (reader.hasNext()) {
+      String name = reader.nextName();
+      if (name.equals("tweet_id")) {
+        tweet_id = reader.nextLong();
+      }
+      else if (name.equals("user_id")) {
+        userId = reader.nextInt();
+      }
+      else if (name.equals("datetime")) {
+        datetime = reader.nextString();
+      }
+      else if (name.equals("message")) {
+        message = reader.nextString();
+      }
+      else {
+        reader.skipValue();
+      }
+    }
+    reader.endObject();
+    if (userId == -1 || datetime == null || message == null) {
+      throw new IllegalStateException("Missing data from current JsonReader");
+    }
+    return new Tweet(tweet_id, userId, datetime, message);
   }
 
   /**
