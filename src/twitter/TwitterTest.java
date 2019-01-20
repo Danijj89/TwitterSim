@@ -16,6 +16,7 @@ public class TwitterTest {
     int numOfUsers = 20000;
     int numFollowRelationXuser = 20;
     int limitHomeTM = 10;
+    String password = null;
 
     // Code used to produce initial files.
 
@@ -26,12 +27,12 @@ public class TwitterTest {
     MySQLDatabaseOP op = new MySQLDatabaseOPImpl();
 
     op.connect("com.mysql.cj.jdbc.Driver",
-        "jdbc:mysql://localhost:3306/twitter?user=root&password=perAdun0!");
+        "jdbc:mysql://localhost:3306/twitter?user=root&password=" + password);
 
     op.addFollowers("follows.json");
 
     // Test performance of reading and writing to disk
-    
+
     long writeToFileTime = util.getWriteSpeed("tweets.json", numOfTweets, numOfUsers);
     System.out.format("Rate of tweets written to file per second = %d\n", writeToFileTime);
 
