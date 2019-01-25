@@ -12,6 +12,9 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents an implementation of database operations specific for MySQL for the Twitter project.
+ */
 public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
 
   private Connection connection = null;
@@ -191,6 +194,21 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       e.getErrorCode();
     }
     return homeTM;
+  }
+
+  @Override
+  public List<Integer> getFollowers(int userId) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void resetDatabase() {
+    try {
+      this.statement.executeQuery("TRUNCATE TABLE tweets");
+      this.statement.executeQuery("TRUNCATE TABLE followers");
+    } catch (SQLException e) {
+      e.getErrorCode();
+    }
   }
 
   public void connect(String driver, String connectionPath) throws IllegalStateException {

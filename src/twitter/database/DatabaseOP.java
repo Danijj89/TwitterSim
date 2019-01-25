@@ -64,4 +64,17 @@ public interface DatabaseOP {
    * @return the list of tweets in the home timeline of the user.
    */
   List<Tweet> getHomeTM(int userId, int numOfTweets);
+
+  /**
+   * Retrieves all the user's id that follow a given user id.
+   *
+   * @param userId the id of the followed user.
+   * @return the list of id of the followers
+   */
+  List<Integer> getFollowers(int userId);
+
+  /**
+   * Resets the database.
+   */
+  void resetDatabase();
 }
