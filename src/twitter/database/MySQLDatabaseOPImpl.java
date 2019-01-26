@@ -183,14 +183,13 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
               + "WHERE followers.user_id = " + String.valueOf(userId) + " ORDER BY tweet_ts "
               + "DESC LIMIT " + String.valueOf(numOfTweets));
       while (this.resultSet.next()) {
-        String tweetId = this.resultSet.getString("tweet_id");
         String user = this.resultSet.getString("user_id");
         Timestamp datetime = this.resultSet.getTimestamp("tweet_ts");
         String message = this.resultSet.getString("tweet_text");
         long millis = datetime.getTime();
         Calendar c = Calendar.getInstance();
         c.setTime(new Date(millis));
-        Tweet t = new Tweet(tweetId, user, c, message);
+        Tweet t = new Tweet(user, c, message);
         homeTM.add(t);
       }
     } catch (SQLException e) {

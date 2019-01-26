@@ -53,11 +53,10 @@ public class TwitterUtil {
       writer.beginArray();
       Random userIdRandomizer = new Random();
       for (int i = 0; i < numTweets; i++) {
-        String tweetId = String.valueOf(i + 1);
         String userId = String.valueOf(userIdRandomizer.nextInt(numUsers) + 1);
         Calendar datetime = this.generateDT();
         String message = RandomStringUtils.randomAlphanumeric(userIdRandomizer.nextInt(140));
-        Tweet t = new Tweet(tweetId, userId, datetime, message);
+        Tweet t = new Tweet(userId, datetime, message);
         this.writeMessage(writer, t);
       }
       writer.endArray();
@@ -165,17 +164,13 @@ public class TwitterUtil {
    * @throws IOException if is it unable to read from the reader.
    */
   private Tweet readTweet(JsonReader reader) throws IOException {
-    String tweet_id = null;
     String userId = null;
     long datetime = -1;
     String message = null;
     reader.beginObject();
     while (reader.hasNext()) {
       String name = reader.nextName();
-      if (name.equals("tweet_id")) {
-        tweet_id = reader.nextString();
-      }
-      else if (name.equals("user_id")) {
+      if (name.equals("user_id")) {
         userId = reader.nextString();
       }
       else if (name.equals("datetime")) {
@@ -189,12 +184,12 @@ public class TwitterUtil {
       }
     }
     reader.endObject();
-    if (userId == null || message == null || datetime == -1 || tweet_id == null) {
+    if (userId == null || message == null || datetime == -1) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
     Calendar date = Calendar.getInstance();
     date.setTime(new Date(datetime));
-    return new Tweet(tweet_id, userId, date, message);
+    return new Tweet(userId, date, message);
   }
 
   /**
@@ -218,7 +213,6 @@ public class TwitterUtil {
    */
   private void writeMessage(JsonWriter writer, Tweet tweet) throws IOException {
     writer.beginObject();
-    writer.name("tweet_id").value(tweet.getTweetId());
     writer.name("user_id").value(tweet.getUserId());
     long date = tweet.getDatetime().getTime().getTime();
     writer.name("datetime").value(date);

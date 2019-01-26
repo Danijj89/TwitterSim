@@ -10,31 +10,20 @@ import java.util.Calendar;
  */
 public class Tweet {
 
-  private final String tweetId;
   private final String userId;
   private final Calendar datetime;
   private String message;
 
-  public Tweet(String tweetId, String userId, Calendar datetime, String message) throws IllegalArgumentException {
-    if (tweetId == null || userId == null || datetime == null || message == null) {
+  public Tweet(String userId, Calendar datetime, String message) throws IllegalArgumentException {
+    if (userId == null || datetime == null || message == null) {
       throw new IllegalArgumentException("Given datetime or message is null");
     }
     if (message.length() > 139) {
       throw new IllegalArgumentException("Length of the message has to be smaller than 140");
     }
-    this.tweetId = tweetId;
     this.userId = userId;
     this.datetime = datetime;
     this.message = message;
-  }
-
-  /**
-   * Gets the tweetId of this Tweet .
-   *
-   * @return the tweetId
-   */
-  public String getTweetId() {
-    return tweetId;
   }
 
   /**
