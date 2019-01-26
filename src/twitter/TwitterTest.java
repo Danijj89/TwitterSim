@@ -11,7 +11,7 @@ import twitter.util.TwitterUtil;
 public class TwitterTest {
 
   public static void main(String[] args) {
-
+    // datetime format "yyyy-MM-dd HH:mm:ss"
     long numOfTweets = 1000000;
     int numOfUsers = 20000;
     int numFollowRelationXuser = 20;

@@ -16,19 +16,43 @@ import redis.clients.jedis.Jedis;
 
 /**
  * Represents an implementation of the Redis database operations for the Twitter project.
+ * Naming conventions used in this implementation:
+ * 'nextTweetId' is a counter that keeps track of the next usable id to use as tweet id;
+ * 'followers:(user_id)' is the format of keys for the set of followers of each user;
+ * 'hometl:(user_id)' is the format of keys for the sorted list of tweets in the user home timeline;
  */
 public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
 
-  // Establishes a new connection to the local default Redis DB.
-  Jedis jedis = new Jedis();
-  SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private final Jedis jedis;
+  private final SimpleDateFormat sdf;
+
+  /**
+   * Establishes a new connection to the local default Redis DB upon construction.
+   * Sets up the {@code nextTweetId} index to start at 1.
+   * Initializes the format of datetime stored in the database.
+   */
+  public RedisDatabaseOPImpl(String datetimeFormat) {
+    if (datetimeFormat == null) {
+      throw new IllegalArgumentException("Given argument is null");
+    }
+    this.jedis = new Jedis();
+    this.sdf = new SimpleDateFormat(datetimeFormat);
+  }
+
+  /**
+   * Gets the next usable id to use as tweet id and increments the counter.
+   *
+   * @return the next usable id.
+   */
+  private String getNextId() {
+    long next = this.jedis.incr("nextTweetId");
+    return String.valueOf(next);
+  }
+
 
   @Override
   public void addTweet(Tweet t) {
-    String key = "tweet:" + t.getTweetId();
-    String datetime = sdf.format(t.getDatetime().getTime());
-    String value = t.getUserId() + ":" + datetime + ":" + t.getMessage();
-    this.jedis.set(key, value);
+    this.addTweet(t, false);
   }
 
   @Override
@@ -58,18 +82,13 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
    * @param reader the reader to read the json  from.
    */
   private void addTweetHelp(JsonReader reader) throws IOException {
-    // might be able to remove the tweet_id condition
-    String tweet_id = null;
     String userId = null;
     long datetime = -1;
     String message = null;
     reader.beginObject();
     while (reader.hasNext()) {
       String name = reader.nextName();
-      if (name.equals("tweet_id")) {
-        tweet_id = reader.nextString();
-      }
-      else if (name.equals("user_id")) {
+      if (name.equals("user_id")) {
         userId = reader.nextString();
       }
       else if (name.equals("datetime")) {
@@ -83,22 +102,30 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
       }
     }
     reader.endObject();
-    if (userId == null || datetime == -1 || message == null || tweet_id == null) {
+    if (userId == null || datetime == -1 || message == null) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
     Calendar c = Calendar.getInstance();
     c.setTime(new Date(datetime));
-    Tweet t = new Tweet(tweet_id, userId, c, message);
+    Tweet t = new Tweet(userId, c, message);
     this.addTweet(t);
   }
 
   @Override
   public void addTweet(Tweet t, boolean broadcast) {
-    this.addTweet(t);
+    String key = "tweet:" + this.getNextId();
+    String datetime = sdf.format(t.getDatetime().getTime());
+    String value = t.getUserId() + ":" + datetime + ":" + t.getMessage();
+    this.jedis.set(key, value);
+
     if (broadcast) {
-      int userId = t.getUserId();
-      Set<String> followers = this.jedis.smembers("followers:" + String.valueOf(userId));
-      for (String s : followers)
+      String userId = t.getUserId();
+      long timeInMilliseconds = t.getDatetime().getTimeInMillis();
+      Set<String> followers = this.jedis.smembers("followers:" + userId);
+      for (String s : followers) {
+        String tempKey = "hometl:" + s;
+        this.jedis.zadd(tempKey, timeInMilliseconds, value);
+      }
     }
   }
 
@@ -154,29 +181,34 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public List<Tweet> getHomeTM(String userId) {
-    Set<String> homeTM = this.jedis.zrevrange("hometl:" + userId, 0, 10);
-    Function<String, Tweet> f = new Function<String, Tweet>() {
-      @Override
-      public Tweet apply(String s) {
-        try {
-          String[] data = s.split(":");
-          String userId = data[0];
-          Calendar datetime = Calendar.getInstance();
-          datetime.setTime(sdf.parse(data[1]));
-          String message = data[2];
-        } catch (ParseException e) {
-          e.printStackTrace();
-        }
-        Tweet t = new Tweet(, , , )
-      }
-    }
-    List<Tweet> result = homeTM.stream().map(s -> s.split(":"))
-
+    return this.getHomeTM(userId, 10);
   }
 
   @Override
   public List<Tweet> getHomeTM(String userId, int numOfTweets) {
-    return null;
+    Set<String> homeTM = this.jedis.zrevrange("hometl:" + userId, 0, numOfTweets);
+    Function<String, Tweet> f = new Function<String, Tweet>() {
+      @Override
+      public Tweet apply(String s) {
+        Tweet t = null;
+        try {
+          String[] data = s.split(":");
+          String user = data[0];
+          Calendar datetime = Calendar.getInstance();
+          datetime.setTime(sdf.parse(data[1]));
+          String message = data[2];
+          t = new Tweet(user, datetime, message);
+        } catch (ParseException e) {
+          e.printStackTrace();
+        }
+        if (t == null) {
+          throw new IllegalStateException("Missing data from tweet");
+        }
+        return t;
+      }
+    };
+    List<Tweet> result = homeTM.stream().map(f).collect(Collectors.toList());
+    return result;
   }
 
   @Override
