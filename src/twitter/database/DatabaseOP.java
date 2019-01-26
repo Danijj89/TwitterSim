@@ -24,7 +24,7 @@ public interface DatabaseOP {
    * @param message the tweet message.
    * @throws IllegalArgumentException if any argument is not valid.
    */
-  void addTweet(int userId, Calendar datetime, String message) throws IllegalArgumentException;
+  void addTweet(String userId, Calendar datetime, String message) throws IllegalArgumentException;
 
   /**
    * Adds all the tweets from a given file.
@@ -39,7 +39,7 @@ public interface DatabaseOP {
    * @param followerId the id of the follower.
    * @param followeeId the id of the followee.
    */
-  void addFollower(int followerId, int followeeId);
+  void addFollower(String followerId, String followeeId);
 
   /**
    * Adds all the follower-followee relations from a given file.
@@ -55,7 +55,7 @@ public interface DatabaseOP {
    * @param userId the id of the user.
    * @return the list of tweets in the home timeline of the user.
    */
-  List<Tweet> getHomeTM(int userId);
+  List<Tweet> getHomeTM(String userId);
 
   /**
    * Retrieves the home timeline of a user given his id and the number of tweets in the timeline.
@@ -64,7 +64,7 @@ public interface DatabaseOP {
    * @param numOfTweets the max number of tweets in the user's home timeline.
    * @return the list of tweets in the home timeline of the user.
    */
-  List<Tweet> getHomeTM(int userId, int numOfTweets);
+  List<Tweet> getHomeTM(String userId, int numOfTweets);
 
   /**
    * Retrieves all the user's id that follow a given user id.
@@ -72,7 +72,7 @@ public interface DatabaseOP {
    * @param userId the id of the followed user.
    * @return the list of id of the followers
    */
-  List<Integer> getFollowers(int userId);
+  List<Integer> getFollowers(String userId);
 
   /**
    * Resets the database.

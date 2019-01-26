@@ -26,7 +26,7 @@ public class TwitterUtil {
    * Builds a list of of tweets of a given size.
    * The userId of the tweet is randomly generated and the value
    * ranges from 1 to a given upper bound.
-   * The datetime is generated randomly given a 'from' and a 'to' year (both inclusive).
+   * The datetime is generated using the {@code generateDT} function.
    * The message are randomly generated.
    * The result is written to a given filePath.
    *
@@ -34,23 +34,14 @@ public class TwitterUtil {
    *
    * @param numTweets the number of tweets to be generated.
    * @param numUsers the range of user ids that will appear in the resulting list (from 0).
-   * @param fromYear the lower bound year for the datetime range.
-   * @param toYear the upper bound year for the datetime range.
    * @param toFilePath the path of the file to save the result to.
    */
-  public void buildTweets(long numTweets, int numUsers, int fromYear, int toYear,
-      String toFilePath) {
+  public void buildTweets(long numTweets, int numUsers, String toFilePath) {
     if (numTweets < 1) {
       throw new IllegalArgumentException("Given tweet number is negative or 0");
     }
     if (numUsers < 1) {
       throw new IllegalArgumentException("Given number of users is negative or 0");
-    }
-    if (fromYear < 1000 || toYear < 1000) {
-      throw new IllegalArgumentException("Given years are negative");
-    }
-    if (fromYear > toYear) {
-      throw new IllegalArgumentException("Given from year is bigger than to year");
     }
     if (toFilePath == null) {
       throw new IllegalArgumentException("Given messages or toFilePath is null");
@@ -62,10 +53,11 @@ public class TwitterUtil {
       writer.beginArray();
       Random userIdRandomizer = new Random();
       for (int i = 0; i < numTweets; i++) {
-        int userId = userIdRandomizer.nextInt(numUsers) + 1;
+        String tweetId = String.valueOf(i + 1);
+        String userId = String.valueOf(userIdRandomizer.nextInt(numUsers) + 1);
         Calendar datetime = this.generateDT();
         String message = RandomStringUtils.randomAlphanumeric(userIdRandomizer.nextInt(140));
-        Tweet t = new Tweet(i + 1, userId, datetime, message);
+        Tweet t = new Tweet(tweetId, userId, datetime, message);
         this.writeMessage(writer, t);
       }
       writer.endArray();
@@ -75,6 +67,15 @@ public class TwitterUtil {
     }
   }
 
+  /**
+   * Builds a randomly generated list of pairs on the form of (follower, followed) and saves it
+   * as JSON to a given file path.
+   *
+   * @param fromUser the lower bound from which user id starts.
+   * @param toUser the upper bound to which user id go.
+   * @param numFollowee the number of followee each user follow.
+   * @param filePath the file path to which to save the list.
+   */
   public void buildFollowTable(int fromUser, int toUser, int numFollowee, String filePath) {
     if (fromUser > toUser) {
       throw new IllegalArgumentException("The from user id is bigger than the to user id");
@@ -119,7 +120,7 @@ public class TwitterUtil {
   public long getWriteSpeed(String filePath, long numOfTweets, int numUsers) {
     long start = System.currentTimeMillis();
     this.buildTweets(
-        numOfTweets, numUsers, 2018, 2019, filePath);
+        numOfTweets, numUsers, filePath);
     long end = System.currentTimeMillis();
     double totalTimeInSec = (end - start) / 1000;
     double tweetsXSec = numOfTweets / totalTimeInSec;
@@ -164,20 +165,18 @@ public class TwitterUtil {
    * @throws IOException if is it unable to read from the reader.
    */
   private Tweet readTweet(JsonReader reader) throws IOException {
-    // might be able to remove the tweet_id condition
-    List<Tweet> tweets = new ArrayList<>();
-    long tweet_id = -1;
-    int userId = -1;
+    String tweet_id = null;
+    String userId = null;
     long datetime = -1;
     String message = null;
     reader.beginObject();
     while (reader.hasNext()) {
       String name = reader.nextName();
       if (name.equals("tweet_id")) {
-        tweet_id = reader.nextLong();
+        tweet_id = reader.nextString();
       }
       else if (name.equals("user_id")) {
-        userId = reader.nextInt();
+        userId = reader.nextString();
       }
       else if (name.equals("datetime")) {
         datetime = reader.nextLong();
@@ -190,7 +189,7 @@ public class TwitterUtil {
       }
     }
     reader.endObject();
-    if (userId == -1 || message == null || datetime == -1) {
+    if (userId == null || message == null || datetime == -1 || tweet_id == null) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
     Calendar date = Calendar.getInstance();
@@ -203,7 +202,7 @@ public class TwitterUtil {
    *
    * @return the Date.
    */
-  public Calendar generateDT() {
+  private Calendar generateDT() {
     Random r = new Random();
     Calendar c = Calendar.getInstance();
     c.setTime(new Date(r.nextLong()));

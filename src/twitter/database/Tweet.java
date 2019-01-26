@@ -6,16 +6,17 @@ import java.util.Calendar;
 /**
  * Value class that represents a Tweet in Twitter.
  * The max length of the message of this tweet is set to 139.
+ * String is the preferred datatype as we are working with databases.
  */
 public class Tweet {
 
-  private final long tweetId;
-  private final int userId;
+  private final String tweetId;
+  private final String userId;
   private final Calendar datetime;
   private String message;
 
-  public Tweet(long tweetId, int userId, Calendar datetime, String message) throws IllegalArgumentException {
-    if (datetime == null || message == null) {
+  public Tweet(String tweetId, String userId, Calendar datetime, String message) throws IllegalArgumentException {
+    if (tweetId == null || userId == null || datetime == null || message == null) {
       throw new IllegalArgumentException("Given datetime or message is null");
     }
     if (message.length() > 139) {
@@ -32,7 +33,7 @@ public class Tweet {
    *
    * @return the tweetId
    */
-  public long getTweetId() {
+  public String getTweetId() {
     return tweetId;
   }
 
@@ -41,7 +42,7 @@ public class Tweet {
    *
    * @return the userId
    */
-  public int getUserId() {
+  public String getUserId() {
     return userId;
   }
 
