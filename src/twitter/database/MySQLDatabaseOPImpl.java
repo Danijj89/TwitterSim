@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -36,19 +37,16 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   }
 
   @Override
-  public void addTweet(int userId, Calendar datetime, String message)
+  public void addTweet(String userId, Calendar datetime, String message)
       throws IllegalArgumentException {
-    if (userId < 1) {
-      throw new IllegalArgumentException("Given user id is smaller than 1");
-    }
-    if (datetime == null || message == null) {
+    if (userId == null || datetime == null || message == null) {
       throw new IllegalArgumentException("Given datetime or message is null");
     }
     try {
       if (!this.connection.isClosed()) {
         this.preparedStatement = this.connection.prepareStatement(
             "INSERT INTO tweets(user_id,tweet_ts,tweet_text) VALUES (?,?,?)");
-        this.preparedStatement.setString(1, String.valueOf(userId));
+        this.preparedStatement.setString(1, userId);
         this.preparedStatement.setString(2, this.dateToMySQLDatetime(datetime));
         this.preparedStatement.setString(3, message);
         this.preparedStatement.executeUpdate();
@@ -77,16 +75,16 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   }
 
   @Override
-  public void addFollower(int followerId, int followeeId) {
-    if (followerId == followeeId) {
+  public void addFollower(String followerId, String followeeId) {
+    if (followerId.equals(followeeId)) {
       throw new IllegalArgumentException("Follower and followee have the same id");
     }
     try {
       if (!this.connection.isClosed()) {
         this.preparedStatement = this.connection.prepareStatement(
             "INSERT INTO followers(user_id,follows_id) VALUES (?,?)");
-        this.preparedStatement.setString(1, String.valueOf(followerId));
-        this.preparedStatement.setString(2, String.valueOf(followeeId));
+        this.preparedStatement.setString(1, followerId);
+        this.preparedStatement.setString(2, followeeId);
         this.preparedStatement.executeUpdate();
       }
     } catch (SQLException e) {
@@ -115,23 +113,23 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
    * @param reader the reader to read the json from.
    */
   private void addFollowerHelp(JsonReader reader) throws IOException {
-    int follower_id = -1;
-    int followee_id = -1;
+    String follower_id = null;
+    String followee_id = null;
     reader.beginObject();
     while (reader.hasNext()) {
       String name = reader.nextName();
       if (name.equals("user_id")) {
-        follower_id = reader.nextInt();
+        follower_id = reader.nextString();
       }
       else if (name.equals("follows_id")) {
-        followee_id = reader.nextInt();
+        followee_id = reader.nextString();
       }
       else {
         reader.skipValue();
       }
     }
     reader.endObject();
-    if (follower_id == -1 || followee_id == -1) {
+    if (follower_id == null || followee_id == null) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
     this.addFollower(follower_id, followee_id);
@@ -144,18 +142,14 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
    */
   private void addTweetHelp(JsonReader reader) throws IOException {
     // might be able to remove the tweet_id condition
-    long tweet_id = -1;
-    int userId = -1;
+    String userId = null;
     long datetime = -1;
     String message = null;
     reader.beginObject();
     while (reader.hasNext()) {
       String name = reader.nextName();
-      if (name.equals("tweet_id")) {
-        tweet_id = reader.nextLong();
-      }
-      else if (name.equals("user_id")) {
-        userId = reader.nextInt();
+      if (name.equals("user_id")) {
+        userId = reader.nextString();
       }
       else if (name.equals("datetime")) {
         datetime = reader.nextLong();
@@ -168,7 +162,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       }
     }
     reader.endObject();
-    if (userId == -1 || datetime == -1 || message == null) {
+    if (userId == null || datetime == -1 || message == null) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
     Calendar c = Calendar.getInstance();
@@ -177,12 +171,12 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   }
 
   @Override
-  public List<Tweet> getHomeTM(int userId) {
+  public List<Tweet> getHomeTM(String userId) {
     return this.getHomeTM(userId, 10);
   }
 
   @Override
-  public List<Tweet> getHomeTM(int userId, int numOfTweets) {
+  public List<Tweet> getHomeTM(String userId, int numOfTweets) {
     List<Tweet> homeTM = new ArrayList<>();
     try {
       this.resultSet = this.statement.executeQuery(
@@ -190,8 +184,8 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
               + "WHERE followers.user_id = " + String.valueOf(userId) + " ORDER BY tweet_ts "
               + "DESC LIMIT " + String.valueOf(numOfTweets));
       while (this.resultSet.next()) {
-        long tweetId = this.resultSet.getLong("tweet_id");
-        int user = this.resultSet.getInt("user_id");
+        String tweetId = this.resultSet.getString("tweet_id");
+        String user = this.resultSet.getString("user_id");
         Timestamp datetime = this.resultSet.getTimestamp("tweet_ts");
         String message = this.resultSet.getString("tweet_text");
         long millis = datetime.getTime();
@@ -207,7 +201,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   }
 
   @Override
-  public List<Integer> getFollowers(int userId) {
+  public List<Integer> getFollowers(String userId) {
     throw new UnsupportedOperationException();
   }
 
@@ -260,14 +254,8 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
    * @return the formatted mysql DATETIME string.
    */
   private String dateToMySQLDatetime(Calendar t) {
-    int year = t.get(Calendar.YEAR);
-    int month = t.get(Calendar.MONTH);
-    int day = t.get(Calendar.DAY_OF_MONTH);
-    int hour = t.get(Calendar.HOUR_OF_DAY);
-    int minute = t.get(Calendar.MINUTE);
-    int second = t.get(Calendar.SECOND);
-    return String.format("%04d-%02d-%02d %02d:%02d:%02d",
-        year, month, day, hour, minute, second);
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    Date d = t.getTime();
+    return sdf.format(d);
   }
-
 }
