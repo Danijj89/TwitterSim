@@ -3,6 +3,8 @@ package twitter.database;
 import com.google.gson.stream.JsonReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import redis.clients.jedis.Jedis;
 
@@ -23,7 +25,7 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
   }
 
   @Override
-  public void addTweet(int userId, String datetime, String message)
+  public void addTweet(int userId, Calendar datetime, String message)
       throws IllegalArgumentException {
     throw new UnsupportedOperationException();
   }
@@ -52,7 +54,7 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
     // might be able to remove the tweet_id condition
     long tweet_id = -1;
     int userId = -1;
-    String datetime = null;
+    long datetime = -1;
     String message = null;
     reader.beginObject();
     while (reader.hasNext()) {
@@ -64,7 +66,7 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
         userId = reader.nextInt();
       }
       else if (name.equals("datetime")) {
-        datetime = reader.nextString();
+        datetime = reader.nextLong();
       }
       else if (name.equals("message")) {
         message = reader.nextString();
@@ -74,16 +76,21 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
       }
     }
     reader.endObject();
-    if (userId == -1 || datetime == null || message == null) {
+    if (userId == -1 || datetime == -1 || message == null) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
-    Tweet t = new Tweet(tweet_id, userId, datetime, message);
+    Calendar c = Calendar.getInstance();
+    c.setTime(new Date(datetime));
+    Tweet t = new Tweet(tweet_id, userId, c, message);
     this.addTweet(t);
   }
 
   @Override
   public void addTweet(Tweet t, boolean broadcast) {
-
+    this.addTweet(t);
+    if (broadcast) {
+      int userId = t.getUserId();
+    }
   }
 
   @Override
@@ -115,6 +122,4 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
   public void resetDatabase() {
     this.jedis.flushAll();
   }
-
-
 }

@@ -1,5 +1,6 @@
 package twitter.database;
 
+import java.util.Calendar;
 import java.util.List;
 
 /**
@@ -23,7 +24,7 @@ public interface DatabaseOP {
    * @param message the tweet message.
    * @throws IllegalArgumentException if any argument is not valid.
    */
-  void addTweet(int userId, String datetime, String message) throws IllegalArgumentException;
+  void addTweet(int userId, Calendar datetime, String message) throws IllegalArgumentException;
 
   /**
    * Adds all the tweets from a given file.

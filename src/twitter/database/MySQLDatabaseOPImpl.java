@@ -9,8 +9,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Represents an implementation of database operations specific for MySQL for the Twitter project.
@@ -31,7 +36,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   }
 
   @Override
-  public void addTweet(int userId, String datetime, String message)
+  public void addTweet(int userId, Calendar datetime, String message)
       throws IllegalArgumentException {
     if (userId < 1) {
       throw new IllegalArgumentException("Given user id is smaller than 1");
@@ -44,7 +49,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
         this.preparedStatement = this.connection.prepareStatement(
             "INSERT INTO tweets(user_id,tweet_ts,tweet_text) VALUES (?,?,?)");
         this.preparedStatement.setString(1, String.valueOf(userId));
-        this.preparedStatement.setString(2, datetime);
+        this.preparedStatement.setString(2, this.dateToMySQLDatetime(datetime));
         this.preparedStatement.setString(3, message);
         this.preparedStatement.executeUpdate();
       }
@@ -141,7 +146,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
     // might be able to remove the tweet_id condition
     long tweet_id = -1;
     int userId = -1;
-    String datetime = null;
+    long datetime = -1;
     String message = null;
     reader.beginObject();
     while (reader.hasNext()) {
@@ -153,7 +158,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
         userId = reader.nextInt();
       }
       else if (name.equals("datetime")) {
-        datetime = reader.nextString();
+        datetime = reader.nextLong();
       }
       else if (name.equals("message")) {
         message = reader.nextString();
@@ -163,10 +168,12 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       }
     }
     reader.endObject();
-    if (userId == -1 || datetime == null || message == null) {
+    if (userId == -1 || datetime == -1 || message == null) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
-    this.addTweet(userId, datetime, message);
+    Calendar c = Calendar.getInstance();
+    c.setTime(new Date(datetime));
+    this.addTweet(userId, c, message);
   }
 
   @Override
@@ -185,9 +192,12 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       while (this.resultSet.next()) {
         long tweetId = this.resultSet.getLong("tweet_id");
         int user = this.resultSet.getInt("user_id");
-        String datetime = this.resultSet.getString("tweet_ts");
+        Timestamp datetime = this.resultSet.getTimestamp("tweet_ts");
         String message = this.resultSet.getString("tweet_text");
-        Tweet t = new Tweet(tweetId, user, datetime, message);
+        long millis = datetime.getTime();
+        Calendar c = Calendar.getInstance();
+        c.setTime(new Date(millis));
+        Tweet t = new Tweet(tweetId, user, c, message);
         homeTM.add(t);
       }
     } catch (SQLException e) {
@@ -242,4 +252,22 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
       throw new IllegalStateException("Closed them all: Should never happen");
     }
   }
+
+  /**
+   * Converts the given {@link Calendar} to a DATETIME string recognized by MySQL.
+   *
+   * @param t the given datetime.
+   * @return the formatted mysql DATETIME string.
+   */
+  private String dateToMySQLDatetime(Calendar t) {
+    int year = t.get(Calendar.YEAR);
+    int month = t.get(Calendar.MONTH);
+    int day = t.get(Calendar.DAY_OF_MONTH);
+    int hour = t.get(Calendar.HOUR_OF_DAY);
+    int minute = t.get(Calendar.MINUTE);
+    int second = t.get(Calendar.SECOND);
+    return String.format("%04d-%02d-%02d %02d:%02d:%02d",
+        year, month, day, hour, minute, second);
+  }
+
 }

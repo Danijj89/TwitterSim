@@ -1,6 +1,8 @@
 package twitter.database;
 
 
+import java.util.Calendar;
+
 /**
  * Value class that represents a Tweet in Twitter.
  * The max length of the message of this tweet is set to 139.
@@ -9,10 +11,10 @@ public class Tweet {
 
   private final long tweetId;
   private final int userId;
-  private final String datetime;
+  private final Calendar datetime;
   private String message;
 
-  public Tweet(long tweetId, int userId, String datetime, String message) throws IllegalArgumentException {
+  public Tweet(long tweetId, int userId, Calendar datetime, String message) throws IllegalArgumentException {
     if (datetime == null || message == null) {
       throw new IllegalArgumentException("Given datetime or message is null");
     }
@@ -48,7 +50,7 @@ public class Tweet {
    *
    * @return the datetime
    */
-  public String getDatetime() {
+  public Calendar getDatetime() {
     return datetime;
   }
 
@@ -60,4 +62,5 @@ public class Tweet {
   public String getMessage() {
     return message;
   }
+
 }

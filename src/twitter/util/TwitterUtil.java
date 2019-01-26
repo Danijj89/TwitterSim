@@ -7,6 +7,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import org.apache.commons.lang3.ArrayUtils;
@@ -61,7 +63,7 @@ public class TwitterUtil {
       Random userIdRandomizer = new Random();
       for (int i = 0; i < numTweets; i++) {
         int userId = userIdRandomizer.nextInt(numUsers) + 1;
-        String datetime = this.generateDT(fromYear, toYear);
+        Calendar datetime = this.generateDT();
         String message = RandomStringUtils.randomAlphanumeric(userIdRandomizer.nextInt(140));
         Tweet t = new Tweet(i + 1, userId, datetime, message);
         this.writeMessage(writer, t);
@@ -166,7 +168,7 @@ public class TwitterUtil {
     List<Tweet> tweets = new ArrayList<>();
     long tweet_id = -1;
     int userId = -1;
-    String datetime = null;
+    long datetime = -1;
     String message = null;
     reader.beginObject();
     while (reader.hasNext()) {
@@ -178,7 +180,7 @@ public class TwitterUtil {
         userId = reader.nextInt();
       }
       else if (name.equals("datetime")) {
-        datetime = reader.nextString();
+        datetime = reader.nextLong();
       }
       else if (name.equals("message")) {
         message = reader.nextString();
@@ -188,29 +190,24 @@ public class TwitterUtil {
       }
     }
     reader.endObject();
-    if (userId == -1 || datetime == null || message == null) {
+    if (userId == -1 || message == null || datetime == -1) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
-    return new Tweet(tweet_id, userId, datetime, message);
+    Calendar date = Calendar.getInstance();
+    date.setTime(new Date(datetime));
+    return new Tweet(tweet_id, userId, date, message);
   }
 
   /**
-   * Generates a random mysql DATETIME.
+   * Generates a random {@link Calendar} using a random long value.
    *
-   * @param fromYear the year lower bound.
-   * @param toYear the year upper bound.
-   * @return a string formatted as a mysql DATETIME.
+   * @return the Date.
    */
-  public String generateDT(int fromYear, int toYear) {
+  public Calendar generateDT() {
     Random r = new Random();
-    int year = r.nextInt(toYear - fromYear + 1) + fromYear;
-    int month = r.nextInt(12) + 1;
-    int day = r.nextInt(28) + 1;
-    int hour = r.nextInt(24);
-    int minute = r.nextInt(60);
-    int second = r.nextInt(60);
-    return String.format("%04d-%02d-%02d %02d:%02d:%02d",
-        year, month, day, hour, minute, second);
+    Calendar c = Calendar.getInstance();
+    c.setTime(new Date(r.nextLong()));
+    return c;
   }
 
   /**
@@ -224,8 +221,10 @@ public class TwitterUtil {
     writer.beginObject();
     writer.name("tweet_id").value(tweet.getTweetId());
     writer.name("user_id").value(tweet.getUserId());
-    writer.name("datetime").value(tweet.getDatetime());
+    long date = tweet.getDatetime().getTime().getTime();
+    writer.name("datetime").value(date);
     writer.name("message").value(tweet.getMessage());
     writer.endObject();
   }
+
 }
