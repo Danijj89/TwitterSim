@@ -10,6 +10,10 @@ import java.util.List;
 import java.util.Set;
 import redis.clients.jedis.Jedis;
 
+/**
+ * Class that abstracts out the similarities between different strategies for implementing the
+ * twitter Redis DB operations.
+ */
 public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
 
   protected final Jedis jedis;
@@ -43,9 +47,7 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public void addTweets(String filePath, boolean broadcast) {
-    if (filePath == null) {
-      throw new IllegalArgumentException("Given file path is null");
-    }
+    this.checkNulls(filePath);
     try {
       JsonReader reader = new JsonReader(new FileReader(filePath));
       reader.beginArray();
@@ -61,26 +63,20 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public void addTweet(Tweet t) {
-    if (t == null) {
-      throw new IllegalArgumentException("Given tweet is null");
-    }
+    this.checkNulls(t);
     this.addTweet(t, false);
   }
 
   @Override
   public void addTweet(String userId, Calendar datetime, String message) {
-    if (userId == null || datetime == null || message == null) {
-      throw new IllegalArgumentException("Given argument is null");
-    }
+    this.checkNulls(userId, datetime, message);
     Tweet t = new Tweet(userId, datetime, message);
     this.addTweet(t, false);
   }
 
   @Override
   public void addTweets(String filePath) {
-    if (filePath == null) {
-      throw new IllegalArgumentException("Given file path is null");
-    }
+    this.checkNulls(filePath);
     this.addTweets(filePath, false);
   }
 
@@ -124,9 +120,7 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public void addFollowers(String filePath) {
-    if (filePath == null) {
-      throw new IllegalArgumentException("Given file path is null");
-    }
+    this.checkNulls(filePath);
     try {
       JsonReader reader = new JsonReader(new FileReader(filePath));
       reader.beginArray();
@@ -170,9 +164,7 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public List<Tweet> getHomeTM(String userId) {
-    if (userId == null) {
-      throw new IllegalArgumentException("Given user id is null");
-    }
+    this.checkNulls(userId);
     return this.getHomeTM(userId, 10);
   }
 
@@ -188,5 +180,18 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
   @Override
   public void resetDatabase() {
     this.jedis.flushAll();
+  }
+
+  /**
+   * Helper method to check for null values in a given list of strings.
+   *
+   * @param s the list of arguments to check.
+   */
+  protected void checkNulls(Object... s) {
+    for (Object arg : s) {
+      if (arg == null) {
+        throw new IllegalArgumentException("Given argument is null");
+      }
+    }
   }
 }

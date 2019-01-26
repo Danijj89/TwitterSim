@@ -1,6 +1,6 @@
 package twitter;
 
-import twitter.database.RedisDatabaseOPImpl;
+import twitter.database.RedisDBOPImplStrategy2;
 import twitter.util.TwitterUtil;
 
 
@@ -21,7 +21,7 @@ public class TwitterRedisTest {
     util.buildTweets(numTweets, numUsers, "tweets.json");
 
     // Perfomance Tests
-    RedisDatabaseOPImpl db = new RedisDatabaseOPImpl("yyyy-MM-dd HH:mm:ss");
+    RedisDBOPImplStrategy2 db = new RedisDBOPImplStrategy2("yyyy-MM-dd HH:mm:ss");
 
     // Flush DB if necessary
     db.resetDatabase();
