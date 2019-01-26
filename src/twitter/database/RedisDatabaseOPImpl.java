@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import redis.clients.jedis.Jedis;
 
 /**
@@ -90,22 +92,65 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
     this.addTweet(t);
     if (broadcast) {
       int userId = t.getUserId();
+      Set<String> followers = this.jedis.smembers("followers:" + String.valueOf(userId));
+      for (String s : followers)
     }
   }
 
   @Override
   public void addFollower(int followerId, int followeeId) {
-
+    String key = "followers:" + String.valueOf(followeeId);
+    String value = String.valueOf(followerId);
+    this.jedis.sadd(key,value);
   }
 
   @Override
   public void addFollowers(String filePath) {
+    try {
+      JsonReader reader = new JsonReader(new FileReader(filePath));
+      reader.beginArray();
+      while (reader.hasNext()) {
+        this.addFollowerHelp(reader);
+      }
+      reader.endArray();
+      reader.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
+  /**
+   * Parses a follower-followee relation from a {@link JsonReader} and inserts it into the database.
+   *
+   * @param reader the reader to read the json from.
+   */
+  private void addFollowerHelp(JsonReader reader) throws IOException {
+    int follower_id = -1;
+    int followee_id = -1;
+    reader.beginObject();
+    while (reader.hasNext()) {
+      String name = reader.nextName();
+      if (name.equals("user_id")) {
+        follower_id = reader.nextInt();
+      }
+      else if (name.equals("follows_id")) {
+        followee_id = reader.nextInt();
+      }
+      else {
+        reader.skipValue();
+      }
+    }
+    reader.endObject();
+    if (follower_id == -1 || followee_id == -1) {
+      throw new IllegalStateException("Missing data from current JsonReader");
+    }
+    this.addFollower(follower_id, followee_id);
   }
 
   @Override
   public List<Tweet> getHomeTM(int userId) {
-    return null;
+    String key = "followers:" + String.valueOf(userId);
+
   }
 
   @Override
@@ -115,7 +160,10 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public List<Integer> getFollowers(int userId) {
-    return null;
+    Set<String> followers = this.jedis.smembers("followers:" + String.valueOf(userId));
+    List<Integer> result = followers.stream().map(s -> Integer.valueOf(s))
+        .collect(Collectors.toList());
+    return result;
   }
 
   @Override
