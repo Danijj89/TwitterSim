@@ -76,6 +76,14 @@ public interface DatabaseOP {
   Set<String> getFollowers(String userId);
 
   /**
+   * Retrieves the set of all the user's id that are followed by a given user.
+   *
+   * @param userId the id of the user to retrieved the set for.
+   * @return the set of user id that the user follow.
+   */
+  Set<String> getFollowed(String userId);
+
+  /**
    * Resets the database.
    */
   void resetDatabase();

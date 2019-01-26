@@ -204,6 +204,11 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   }
 
   @Override
+  public Set<String> getFollowed(String userId) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void resetDatabase() {
     try {
       this.statement.executeQuery("TRUNCATE TABLE tweets");
