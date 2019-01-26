@@ -5,7 +5,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -63,17 +62,7 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public void addTweets(String filePath) {
-    try {
-      JsonReader reader = new JsonReader(new FileReader(filePath));
-      reader.beginArray();
-      while (reader.hasNext()) {
-        this.addTweetHelp(reader);
-      }
-      reader.endArray();
-      reader.close();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    this.addTweets(filePath, false);
   }
 
   /**
@@ -81,7 +70,7 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
    *
    * @param reader the reader to read the json  from.
    */
-  private void addTweetHelp(JsonReader reader) throws IOException {
+  private void addTweetHelp(JsonReader reader, boolean broadcast) throws IOException {
     String userId = null;
     long datetime = -1;
     String message = null;
@@ -108,7 +97,7 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
     Calendar c = Calendar.getInstance();
     c.setTime(new Date(datetime));
     Tweet t = new Tweet(userId, c, message);
-    this.addTweet(t);
+    this.addTweet(t, broadcast);
   }
 
   @Override
@@ -130,6 +119,25 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
   }
 
   @Override
+  public void addTweets(String filePath, boolean broadcast) {
+    if (filePath == null) {
+      throw new IllegalArgumentException("Given file path is null");
+    }
+    try {
+      JsonReader reader = new JsonReader(new FileReader(filePath));
+      reader.beginArray();
+      while (reader.hasNext()) {
+        this.addTweetHelp(reader, broadcast);
+      }
+      reader.endArray();
+      reader.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+
+  @Override
   public void addFollower(String followerId, String followeeId) {
     String key = "followers:" + followeeId;
     String value = followerId;
@@ -138,6 +146,9 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public void addFollowers(String filePath) {
+    if (filePath == null) {
+      throw new IllegalArgumentException("Given file path is null");
+    }
     try {
       JsonReader reader = new JsonReader(new FileReader(filePath));
       reader.beginArray();

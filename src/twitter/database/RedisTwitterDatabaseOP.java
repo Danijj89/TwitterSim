@@ -14,4 +14,14 @@ public interface RedisTwitterDatabaseOP extends DatabaseOP {
    */
   void addTweet(Tweet t, boolean broadcast);
 
+
+  /**
+   * Adds all the tweets from a given file path into the DB. If the broadcast value is {@code true},
+   * it will broadcast the tweets to all teh followers of each tweet author.
+   *
+   * @param filePath the path to the file to be read.
+   * @param broadcast if it has to be broadcasted to the followers.
+   */
+  void addTweets(String filePath, boolean broadcast);
+
 }

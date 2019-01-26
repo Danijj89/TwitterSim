@@ -8,10 +8,9 @@ import twitter.database.MySQLDatabaseOPImpl;
 import twitter.database.Tweet;
 import twitter.util.TwitterUtil;
 
-public class TwitterTest {
+public class TwitterMySqlTest {
 
   public static void main(String[] args) {
-    // datetime format "yyyy-MM-dd HH:mm:ss"
     long numOfTweets = 1000000;
     int numOfUsers = 20000;
     int numFollowRelationXuser = 20;
@@ -22,7 +21,7 @@ public class TwitterTest {
 
     TwitterUtil util = new TwitterUtil();
 
-    util.buildTweets(numOfTweets, numOfUsers, 2015, 2018,"tweets.json");
+    util.buildTweets(numOfTweets, numOfUsers,"tweets.json");
     util.buildFollowTable(1, numOfUsers, numFollowRelationXuser, "follows.json");
     MySQLDatabaseOP op = new MySQLDatabaseOPImpl();
 
@@ -57,7 +56,7 @@ public class TwitterTest {
     long totalHomeTMSize = 0;
     start = System.currentTimeMillis();
     for (int i = 0; i < 100; i++) {
-      int user_id = r.nextInt(numOfUsers) + 1;
+      String user_id = String.valueOf(r.nextInt(numOfUsers) + 1);
       resultHomeTM = op.getHomeTM(user_id, limitHomeTM);
       totalHomeTMSize += resultHomeTM.size();
     }
