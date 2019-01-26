@@ -3,10 +3,14 @@ package twitter.database;
 import com.google.gson.stream.JsonReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import redis.clients.jedis.Jedis;
 
@@ -17,17 +21,18 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
 
   // Establishes a new connection to the local default Redis DB.
   Jedis jedis = new Jedis();
+  SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   @Override
   public void addTweet(Tweet t) {
-    String key = new StringBuilder("tweet:").append(t.getUserId())
-        .append(":").append(t.getTweetId()).toString();
-    String value = t.getMessage();
+    String key = "tweet:" + t.getTweetId();
+    String datetime = sdf.format(t.getDatetime().getTime());
+    String value = t.getUserId() + ":" + datetime + ":" + t.getMessage();
     this.jedis.set(key, value);
   }
 
   @Override
-  public void addTweet(int userId, Calendar datetime, String message)
+  public void addTweet(String userId, Calendar datetime, String message)
       throws IllegalArgumentException {
     throw new UnsupportedOperationException();
   }
@@ -54,18 +59,18 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
    */
   private void addTweetHelp(JsonReader reader) throws IOException {
     // might be able to remove the tweet_id condition
-    long tweet_id = -1;
-    int userId = -1;
+    String tweet_id = null;
+    String userId = null;
     long datetime = -1;
     String message = null;
     reader.beginObject();
     while (reader.hasNext()) {
       String name = reader.nextName();
       if (name.equals("tweet_id")) {
-        tweet_id = reader.nextLong();
+        tweet_id = reader.nextString();
       }
       else if (name.equals("user_id")) {
-        userId = reader.nextInt();
+        userId = reader.nextString();
       }
       else if (name.equals("datetime")) {
         datetime = reader.nextLong();
@@ -78,7 +83,7 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
       }
     }
     reader.endObject();
-    if (userId == -1 || datetime == -1 || message == null) {
+    if (userId == null || datetime == -1 || message == null || tweet_id == null) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
     Calendar c = Calendar.getInstance();
@@ -98,9 +103,9 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
   }
 
   @Override
-  public void addFollower(int followerId, int followeeId) {
-    String key = "followers:" + String.valueOf(followeeId);
-    String value = String.valueOf(followerId);
+  public void addFollower(String followerId, String followeeId) {
+    String key = "followers:" + followeeId;
+    String value = followerId;
     this.jedis.sadd(key,value);
   }
 
@@ -125,45 +130,59 @@ public class RedisDatabaseOPImpl implements RedisTwitterDatabaseOP {
    * @param reader the reader to read the json from.
    */
   private void addFollowerHelp(JsonReader reader) throws IOException {
-    int follower_id = -1;
-    int followee_id = -1;
+    String follower_id = null;
+    String followee_id = null;
     reader.beginObject();
     while (reader.hasNext()) {
       String name = reader.nextName();
       if (name.equals("user_id")) {
-        follower_id = reader.nextInt();
+        follower_id = reader.nextString();
       }
       else if (name.equals("follows_id")) {
-        followee_id = reader.nextInt();
+        followee_id = reader.nextString();
       }
       else {
         reader.skipValue();
       }
     }
     reader.endObject();
-    if (follower_id == -1 || followee_id == -1) {
+    if (follower_id == null || followee_id == null) {
       throw new IllegalStateException("Missing data from current JsonReader");
     }
     this.addFollower(follower_id, followee_id);
   }
 
   @Override
-  public List<Tweet> getHomeTM(int userId) {
-    String key = "followers:" + String.valueOf(userId);
+  public List<Tweet> getHomeTM(String userId) {
+    Set<String> homeTM = this.jedis.zrevrange("hometl:" + userId, 0, 10);
+    Function<String, Tweet> f = new Function<String, Tweet>() {
+      @Override
+      public Tweet apply(String s) {
+        try {
+          String[] data = s.split(":");
+          String userId = data[0];
+          Calendar datetime = Calendar.getInstance();
+          datetime.setTime(sdf.parse(data[1]));
+          String message = data[2];
+        } catch (ParseException e) {
+          e.printStackTrace();
+        }
+        Tweet t = new Tweet(, , , )
+      }
+    }
+    List<Tweet> result = homeTM.stream().map(s -> s.split(":"))
 
   }
 
   @Override
-  public List<Tweet> getHomeTM(int userId, int numOfTweets) {
+  public List<Tweet> getHomeTM(String userId, int numOfTweets) {
     return null;
   }
 
   @Override
-  public List<Integer> getFollowers(int userId) {
-    Set<String> followers = this.jedis.smembers("followers:" + String.valueOf(userId));
-    List<Integer> result = followers.stream().map(s -> Integer.valueOf(s))
-        .collect(Collectors.toList());
-    return result;
+  public Set<String> getFollowers(String userId) {
+    Set<String> followers = this.jedis.smembers("followers:" + userId);
+    return followers;
   }
 
   @Override

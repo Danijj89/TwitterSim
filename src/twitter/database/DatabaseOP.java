@@ -2,6 +2,7 @@ package twitter.database;
 
 import java.util.Calendar;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Represents an interface of operations that interact with a Twitter database.
@@ -72,7 +73,7 @@ public interface DatabaseOP {
    * @param userId the id of the followed user.
    * @return the list of id of the followers
    */
-  List<Integer> getFollowers(String userId);
+  Set<String> getFollowers(String userId);
 
   /**
    * Resets the database.

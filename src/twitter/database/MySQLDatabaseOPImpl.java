@@ -12,11 +12,10 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 /**
  * Represents an implementation of database operations specific for MySQL for the Twitter project.
@@ -201,7 +200,7 @@ public class MySQLDatabaseOPImpl implements MySQLDatabaseOP {
   }
 
   @Override
-  public List<Integer> getFollowers(String userId) {
+  public Set<String> getFollowers(String userId) {
     throw new UnsupportedOperationException();
   }
 
