@@ -1,8 +1,10 @@
 package twitter.database;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,7 +83,7 @@ public class RedisDBOPImplStrategy2 extends AbstractRedisDBOPImpl {
     if (numOfTweets < 1) {
       throw new IllegalArgumentException("The number of tweets has to be bigger than 0");
     }
-    Set<String> homeTM = this.jedis.zrevrange("hometl:" + userId, 0, numOfTweets);
+    Set<String> homeTM = this.jedis.zrevrange("hometl:" + userId, 0, numOfTweets - 1);
     // Converts the tweet from a string to a Tweet
     Function<String, Tweet> f = s -> {
         Tweet t = null;

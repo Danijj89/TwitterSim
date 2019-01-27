@@ -23,4 +23,9 @@ public interface RedisTwitterDatabaseOP extends DatabaseOP {
    */
   void addTweets(String filePath, boolean broadcast);
 
+  /**
+   * Closes the connection to the DB.
+   */
+  void closeConnection();
+
 }

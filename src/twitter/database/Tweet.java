@@ -15,9 +15,11 @@ public class Tweet {
   private String message;
 
   public Tweet(String userId, Calendar datetime, String message) throws IllegalArgumentException {
+    /*
     if (userId == null || datetime == null || message == null) {
       throw new IllegalArgumentException("Given datetime or message is null");
     }
+    */
     if (message.length() > 139) {
       throw new IllegalArgumentException("Length of the message has to be smaller than 140");
     }

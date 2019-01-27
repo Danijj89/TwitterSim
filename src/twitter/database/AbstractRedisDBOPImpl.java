@@ -28,7 +28,7 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
     if (datetimeFormat == null) {
       throw new IllegalArgumentException("Given argument is null");
     }
-    this.jedis = new Jedis();
+    this.jedis = new Jedis("localhost");
     this.sdf = new SimpleDateFormat(datetimeFormat);
   }
 
@@ -51,8 +51,11 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
     try {
       JsonReader reader = new JsonReader(new FileReader(filePath));
       reader.beginArray();
+      int counter = 0;
       while (reader.hasNext()) {
+        if (counter % 1000 == 0) { System.out.println(counter);}
         this.addTweetHelp(reader, broadcast);
+        counter++;
       }
       reader.endArray();
       reader.close();
@@ -179,7 +182,7 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
 
   @Override
   public void resetDatabase() {
-    this.jedis.flushAll();
+    this.jedis.flushDB();
   }
 
   /**
@@ -193,5 +196,10 @@ public abstract class AbstractRedisDBOPImpl implements RedisTwitterDatabaseOP {
         throw new IllegalArgumentException("Given argument is null");
       }
     }
+  }
+
+  @Override
+  public void closeConnection() {
+    this.jedis.close();
   }
 }

@@ -6,6 +6,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,19 +18,18 @@ import java.util.stream.Collectors;
  * Represents an implementation of the Redis database operations for the
  * Twitter project (strategy 1).
  * Naming conventions used in this implementation:
- * 'tweet:(int)' is the key for each tweet in the database;
- * 'nextTweetId' is a counter that keeps track of the next usable id to use as tweet id;
- * 'followers:(user_id)' is the format of keys for the set of followers of each user;
- * 'hometl:(user_id)' is the format of keys for the sorted list of tweets in the user home timeline;
+ * 'tweet:(int)' is the key to access each tweet object;
+ * 'user:tweets:(user_id)' is the key for all the tweets of a user;
+ * 'followed:(user_id)' is the format of keys for the set user followed by each user;
  *
  * DESIGN:
  * The implementation keeps track of an index counter and utilizes its values to represent unique
  * tweets id's whenever a tweet is added. Each tweet is added using the above naming convention
- * and stores as its values a Redis hash (best way to represent objects). If the broadcast values
- * is true, it computes the list of followers of the tweet author and adds this tweet to
- * each of those followers' home timeline. The home timeline are represented as Redis sorted set
- * using the date (in milliseconds from epoch) of tweet as the sorting value.
- * Each value in the sorted set is a the key to retrieve the tweet.
+ * and stores as its values a Redis hash (best way to represent objects). Each user keeps track of
+ * all its tweets using a Redis sorted set of tweet id's. To retrieve the home timeline, the program
+ * computes the Redis set of followed users and for each of them, gets the top N number of
+ * tweets and puts them into a temp list. Then the list gets sorted and the first N number gets
+ * retrieved.
  */
 public class RedisDBOPImplStrategy1 extends AbstractRedisDBOPImpl {
 
@@ -65,7 +65,7 @@ public class RedisDBOPImplStrategy1 extends AbstractRedisDBOPImpl {
   @Override
   public void addFollower(String followerId, String followeeId) {
     this.checkNulls(followerId, followeeId);
-    String key = "followers:" + followeeId;
+    String key = "followed:" + followeeId;
     String value = followerId;
     this.jedis.sadd(key,value);
   }
@@ -82,7 +82,7 @@ public class RedisDBOPImplStrategy1 extends AbstractRedisDBOPImpl {
     // Function that takes in a user id from the list of those followed by the homeTM user
     // and converts into a tweet and adds it into the tempListResult
     Consumer<String> c = s -> {
-      Set<String> tweetIds = this.jedis.zrevrange("user:tweets:" + s, 0, numOfTweets);
+      Set<String> tweetIds = this.jedis.zrevrange("user:tweets:" + s, 0, numOfTweets - 1);
       // Function that converts the tweet of a user from string to tweet
       Function<String, Tweet> f2 = s2 -> {
         Tweet t = null;
@@ -104,8 +104,11 @@ public class RedisDBOPImplStrategy1 extends AbstractRedisDBOPImpl {
       List<Tweet> userTweets = tweetIds.stream().map(f2).collect(Collectors.toList());
       tempListResult.addAll(userTweets);
     };
+    Iterator<String> iter = followed.iterator();
+    while (iter.hasNext()) {
+      c.accept(iter.next());
+    }
     // The comparison is inverted such that the sorted array has the highest numbers in the front
-    followed.stream().peek(c);
     Collections.sort(tempListResult, new Comparator<Tweet>() {
       @Override
       public int compare(Tweet o1, Tweet o2) {
@@ -140,7 +143,7 @@ public class RedisDBOPImplStrategy1 extends AbstractRedisDBOPImpl {
 
   @Override
   public Set<String> getFollowed(String userId) {
-    Set<String> followees = this.jedis.smembers("followees:" + userId);
+    Set<String> followees = this.jedis.smembers("followed:" + userId);
     return followees;
   }
 }
