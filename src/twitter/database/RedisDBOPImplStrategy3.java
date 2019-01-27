@@ -2,61 +2,49 @@ package twitter.database;
 
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * Represents an implementation of the Redis database operations for the
- * Twitter project (strategy 2).
+ * Twitter project (strategy 3).
  * Naming conventions used in this implementation:
- * 'tweet:(int)' is the key for each tweet in the database;
- * 'nextTweetId' is a counter that keeps track of the next usable id to use as tweet id;
- * 'followers:(user_id)' is the format of keys for the set of followers of each user;
- * 'hometl:(user_id)' is the format of keys for the sorted list of tweets in the user home timeline;
+ * 'tweet:(int)' is the key to access each tweet object;
+ * 'hometl:(user_id)' is the key for the home timeline of the users;
+ * 'followers:(user_id)' is the format of keys for the set users that follow the user;
  *
  * DESIGN:
  * The implementation keeps track of an index counter and utilizes its values to represent unique
  * tweets id's whenever a tweet is added. Each tweet is added using the above naming convention
- * and stores as its values a Redis hash (best way to represent objects). If the broadcast values
- * is true, it computes the list of followers of the tweet author and adds this tweet to
- * each of those followers' home timeline. The home timeline are represented as Redis sorted set
- * using the date (in milliseconds from epoch) of tweet as the sorting value.
- * Each value in the sorted set is a the key to retrieve the tweet.
+ * and stores as strings. If the broadcast values is true, it computes the list of followers of
+ * the tweet author and adds this tweet to each of those followers' home timeline.
+ * The home timeline are represented as Redis sorted set using the date (in milliseconds from epoch)
+ * of tweet as the sorting value. Each value in the sorted set is a tweet.
+ * When retrieving the home timeline, to simulate reading strings from DB without turning the result
+ * into tweets, the {@code getHomeTM} method returns an empty list.
  */
-public class RedisDBOPImplStrategy2 extends AbstractRedisDBOPImpl {
+public class RedisDBOPImplStrategy3 extends AbstractRedisDBOPImpl {
 
   /**
    * Establishes a new connection to the local default Redis DB upon construction.
    * Sets up the {@code nextTweetId} index to start at 1.
    * Initializes the format of datetime stored in the database.
    */
-  public RedisDBOPImplStrategy2(String datetimeFormat) {
+  public RedisDBOPImplStrategy3(String datetimeFormat) {
     super(datetimeFormat);
   }
 
-  /**
-   * Adds tweets into the DB as hashes (like objects) with the following fields:
-   * userid = the id of the user;
-   * datetime = the date and time in the format specified when this instance was constructed;
-   * text = the message in the tweet;
-   */
   @Override
   public void addTweet(Tweet t, boolean broadcast) {
     this.checkNulls(t);
     String key = "tweet:" + this.getNextId();
-
     String datetime = this.sdf.format(t.getDatetime().getTime());
-    Map<String, String> values = new HashMap<>();
-    values.put("userid", t.getUserId());
-    values.put("datetime", datetime);
-    values.put("text", t.getMessage());
-    this.jedis.hmset(key, values);
+    String values = t.getUserId() + ":" + datetime + ":" + t.getMessage();
+    this.jedis.set(key, values);
 
     if (broadcast) {
       String userId = t.getUserId();
@@ -64,7 +52,7 @@ public class RedisDBOPImplStrategy2 extends AbstractRedisDBOPImpl {
       Set<String> followers = this.jedis.smembers("followers:" + userId);
       for (String s : followers) {
         String tempKey = "hometl:" + s;
-        this.jedis.zadd(tempKey, timeInMilliseconds, key);
+        this.jedis.zadd(tempKey, timeInMilliseconds, values);
       }
     }
   }
@@ -84,16 +72,24 @@ public class RedisDBOPImplStrategy2 extends AbstractRedisDBOPImpl {
       throw new IllegalArgumentException("The number of tweets has to be bigger than 0");
     }
     Set<String> homeTM = this.jedis.zrevrange("hometl:" + userId, 0, numOfTweets - 1);
+    /*
     // Converts the tweet from a string to a Tweet
     Function<String, Tweet> f = s -> {
       Tweet t = null;
       try {
-        String id = this.jedis.hget(s, "userid");
-        String dt = this.jedis.hget(s, "datetime");
-        String text = this.jedis.hget(s, "text");
+        List<String> data = Arrays.asList(s.split(":"));
+        String id = data.get(0);
+        String dt = data.get(1) + ":" + data.get(2) + ":" + data.get(3);
+        String text = null;
+        if (data.size() == 4) {
+          text = "";
+        }
+        else {
+          text = data.get(4);
+        }
         Calendar datetime = Calendar.getInstance();
         datetime.setTime(sdf.parse(dt));
-        t = new Tweet(id, datetime, text);
+        t = new Tweet(id, null, text);
       } catch (ParseException e) {
         e.printStackTrace();
       }
@@ -103,6 +99,8 @@ public class RedisDBOPImplStrategy2 extends AbstractRedisDBOPImpl {
       return t;
     };
     List<Tweet> result = homeTM.stream().map(f).collect(Collectors.toList());
+    */
+    List<Tweet> result = new ArrayList<>();
     return result;
   }
 
@@ -113,9 +111,6 @@ public class RedisDBOPImplStrategy2 extends AbstractRedisDBOPImpl {
     return followers;
   }
 
-  /**
-   * Not needed in this strategy.
-   */
   @Override
   public Set<String> getFollowed(String userId) {
     throw new UnsupportedOperationException();

@@ -1,13 +1,11 @@
 package twitter;
 
-import java.util.List;
 import java.util.Random;
-import twitter.database.AbstractRedisDBOPImpl;
 import twitter.database.RedisDBOPImplStrategy1;
 import twitter.database.RedisDBOPImplStrategy2;
+import twitter.database.RedisDBOPImplStrategy3;
 import twitter.database.RedisTwitterDatabaseOP;
-import twitter.database.Tweet;
-import twitter.util.TwitterUtil;
+
 
 
 /**
@@ -31,9 +29,11 @@ public class TwitterRedisTest {
     System.out.println("Done initializing files");
     */
 
-    testStrat1();
+    //testStrat1();
 
     //testStrat2();
+
+    testStrat3();
 
 
   }
@@ -101,5 +101,38 @@ public class TwitterRedisTest {
     long avgReadXsec = (long)(numOfHomeTMToRetrieve / totalTime2);
     System.out.format("Average reads per second = %d\n", avgReadXsec);
     strat2.closeConnection();
+  }
+
+  static public void testStrat3() {
+    RedisTwitterDatabaseOP strat3 = new RedisDBOPImplStrategy3("yyyy-MM-dd HH:mm:ss");
+
+    //strat3.resetDatabase();
+
+    //strat3.addFollowers("follows.json");
+
+    /*
+    // write performance test
+    long start = System.currentTimeMillis();
+    strat3.addTweets("tweets.json", true);
+    long end = System.currentTimeMillis();
+
+    double totalTime = (end - start) / 1000.0;
+    long avgWritesXsec = (long)(numTweets / totalTime);
+    System.out.format("Average writes per second = %d\n",avgWritesXsec);
+    */
+
+    // read perfomance test
+    long start2 = System.currentTimeMillis();
+    Random r = new Random();
+    for (int i = 0; i < numOfHomeTMToRetrieve; i++) {
+      String id = String.valueOf(r.nextInt(numUsers) + 1);
+      strat3.getHomeTM(id, numOfTweetsInHomeTM);
+    }
+    long end2 = System.currentTimeMillis();
+
+    double totalTime2 = (end2 - start2) / 1000.0;
+    long avgReadXsec = (long)(numOfHomeTMToRetrieve / totalTime2);
+    System.out.format("Average reads per second = %d\n", avgReadXsec);
+    strat3.closeConnection();
   }
 }

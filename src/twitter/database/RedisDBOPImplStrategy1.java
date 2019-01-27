@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * Naming conventions used in this implementation:
  * 'tweet:(int)' is the key to access each tweet object;
  * 'user:tweets:(user_id)' is the key for all the tweets of a user;
- * 'followed:(user_id)' is the format of keys for the set user followed by each user;
+ * 'followed:(user_id)' is the format of keys for the set of users followed by each user;
  *
  * DESIGN:
  * The implementation keeps track of an index counter and utilizes its values to represent unique
