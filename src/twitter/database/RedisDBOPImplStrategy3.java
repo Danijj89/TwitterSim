@@ -4,6 +4,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -42,13 +43,13 @@ public class RedisDBOPImplStrategy3 extends AbstractRedisDBOPImpl {
   public void addTweet(Tweet t, boolean broadcast) {
     this.checkNulls(t);
     String key = "tweet:" + this.getNextId();
-    String datetime = this.sdf.format(t.getDatetime().getTime());
+    long timeInMilliseconds = t.getDatetime().getTimeInMillis();
+    String datetime = String.valueOf(timeInMilliseconds);
     String values = t.getUserId() + ":" + datetime + ":" + t.getMessage();
     this.jedis.set(key, values);
 
     if (broadcast) {
       String userId = t.getUserId();
-      long timeInMilliseconds = t.getDatetime().getTimeInMillis();
       Set<String> followers = this.jedis.smembers("followers:" + userId);
       for (String s : followers) {
         String tempKey = "hometl:" + s;
@@ -72,35 +73,29 @@ public class RedisDBOPImplStrategy3 extends AbstractRedisDBOPImpl {
       throw new IllegalArgumentException("The number of tweets has to be bigger than 0");
     }
     Set<String> homeTM = this.jedis.zrevrange("hometl:" + userId, 0, numOfTweets - 1);
-    /*
     // Converts the tweet from a string to a Tweet
     Function<String, Tweet> f = s -> {
       Tweet t = null;
-      try {
-        List<String> data = Arrays.asList(s.split(":"));
-        String id = data.get(0);
-        String dt = data.get(1) + ":" + data.get(2) + ":" + data.get(3);
-        String text = null;
-        if (data.size() == 4) {
-          text = "";
-        }
-        else {
-          text = data.get(4);
-        }
-        Calendar datetime = Calendar.getInstance();
-        datetime.setTime(sdf.parse(dt));
-        t = new Tweet(id, null, text);
-      } catch (ParseException e) {
-        e.printStackTrace();
+      List<String> data = Arrays.asList(s.split(":"));
+      String id = data.get(0);
+      String dt = data.get(1);
+      long timeInMilliseconds = Long.valueOf(dt);
+      String text = null;
+      if (data.size() == 2) {
+        text = "";
       }
+      else {
+        text = data.get(2);
+      }
+      Calendar datetime = Calendar.getInstance();
+      datetime.setTime(new Date(timeInMilliseconds));
+      t = new Tweet(id, null, text);
       if (t == null) {
         throw new IllegalStateException("Missing data from tweet");
       }
       return t;
     };
     List<Tweet> result = homeTM.stream().map(f).collect(Collectors.toList());
-    */
-    List<Tweet> result = new ArrayList<>();
     return result;
   }
 

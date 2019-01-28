@@ -106,11 +106,10 @@ public class TwitterRedisTest {
   static public void testStrat3() {
     RedisTwitterDatabaseOP strat3 = new RedisDBOPImplStrategy3("yyyy-MM-dd HH:mm:ss");
 
-    //strat3.resetDatabase();
+    strat3.resetDatabase();
 
-    //strat3.addFollowers("follows.json");
+    strat3.addFollowers("follows.json");
 
-    /*
     // write performance test
     long start = System.currentTimeMillis();
     strat3.addTweets("tweets.json", true);
@@ -119,7 +118,6 @@ public class TwitterRedisTest {
     double totalTime = (end - start) / 1000.0;
     long avgWritesXsec = (long)(numTweets / totalTime);
     System.out.format("Average writes per second = %d\n",avgWritesXsec);
-    */
 
     // read perfomance test
     long start2 = System.currentTimeMillis();
